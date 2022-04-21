@@ -3,18 +3,20 @@
 , expat, libcap, oniguruma, libdwarf, libmcrypt, tbb, gperftools, glog, libkrb5
 , bzip2, openldap, readline, libelf, uwimap, binutils, cyrus_sasl, pam, libpng
 , libxslt, freetype, gdb, git, perl, libmysqlclient, gmp, libyaml, libedit
-, libvpx, imagemagick, fribidi, gperf, which, ocamlPackages
+, libvpx, imagemagick6, fribidi, gperf, which, ocamlPackages, re2c, sqlite
+, libgccjit, re2, tzdata, lz4, double-conversion, brotli, libzip, zstd
+, jemalloc, fmt, libsodium, unzip
 }:
 
 stdenv.mkDerivation rec {
   pname = "hhvm";
-  version = "3.23.2";
+  version = "4.158.0";
 
   # use git version since we need submodules
   src = fetchgit {
     url    = "https://github.com/facebook/hhvm.git";
     rev    = "HHVM-${version}";
-    sha256 = "1nic49j8nghx82lgvz0b95r78sqz46qaaqv4nx48p8yrj9ysnd7i";
+    sha256 = "JV4xoDgKWPJXwWHHRGrMoZA81AxkNj/IDUZk+yeBiAw=";
     fetchSubmodules = true;
   };
 
@@ -24,12 +26,14 @@ stdenv.mkDerivation rec {
       libevent gd curl libxml2 icu openssl zlib php expat libcap
       oniguruma libdwarf libmcrypt tbb gperftools bzip2 openldap readline
       libelf uwimap binutils cyrus_sasl pam glog libpng libxslt libkrb5
-      gmp libyaml libedit libvpx imagemagick fribidi gperf which
-      ocamlPackages.ocaml ocamlPackages.ocamlbuild
+      gmp libyaml libedit libvpx imagemagick6 fribidi gperf which
+      ocamlPackages.ocaml ocamlPackages.ocamlbuild re2c sqlite libgccjit re2
+      tzdata lz4 double-conversion brotli libzip zstd jemalloc fmt libsodium
+      unzip
     ];
 
   patches = [
-    ./flexible-array-members-gcc6.patch
+    ./system-tzdata.patch
   ];
 
   dontUseCmakeBuildDir = true;
@@ -38,24 +42,24 @@ stdenv.mkDerivation rec {
   # work around broken build system
   NIX_CFLAGS_COMPILE = "-I${freetype.dev}/include/freetype2";
 
-  # the cmake package does not handle absolute CMAKE_INSTALL_INCLUDEDIR correctly
-  # (setting it to an absolute path causes include files to go to $out/$out/include,
-  #  because the absolute path is interpreted with root at $out).
-  cmakeFlags = [ "-DCMAKE_INSTALL_INCLUDEDIR=include" ];
+  cmakeFlags = [
+    "-DHAVE_SYSTEM_TZDATA:BOOL=true" 
+    # the cmake package does not handle absolute CMAKE_INSTALL_INCLUDEDIR correctly
+    # (setting it to an absolute path causes include files to go to $out/$out/include,
+    #  because the absolute path is interpreted with root at $out).
+    "-DCMAKE_INSTALL_INCLUDEDIR=include"
+  ];
 
-  prePatch = ''
-    substituteInPlace ./configure \
-      --replace "/usr/bin/env bash" ${stdenv.shell}
-    substituteInPlace ./third-party/ocaml/CMakeLists.txt \
-      --replace "/bin/bash" ${stdenv.shell}
-    perl -pi -e 's/([ \t(])(isnan|isinf)\(/$1std::$2(/g' \
-      hphp/runtime/base/*.cpp \
-      hphp/runtime/ext/std/*.cpp \
-      hphp/runtime/ext_zend_compat/php-src/main/*.cpp \
-      hphp/runtime/ext_zend_compat/php-src/main/*.h
-    sed '1i#include <functional>' -i third-party/mcrouter/src/mcrouter/lib/cycles/Cycles.h
-    patchShebangs .
-  '';
+  # prePatch = ''
+  #   substituteInPlace ./configure \
+  #     --replace "/usr/bin/env bash" ${stdenv.shell}
+  #   perl -pi -e 's/([ \t(])(isnan|isinf)\(/$1std::$2(/g' \
+  #     hphp/runtime/base/*.cpp \
+  #     hphp/runtime/ext/std/*.cpp \
+  #     hphp/runtime/ext_zend_compat/php-src/main/*.cpp \
+  #     hphp/runtime/ext_zend_compat/php-src/main/*.h
+  #   patchShebangs .
+  # '';
 
   meta = {
     description = "High-performance JIT compiler for PHP/Hack";
@@ -63,6 +67,5 @@ stdenv.mkDerivation rec {
     license     = "PHP/Zend";
     platforms   = [ "x86_64-linux" ];
     maintainers = [ lib.maintainers.thoughtpolice ];
-    broken = true; # Since 2018-04-21, see https://hydra.nixos.org/build/73059373
   };
 }

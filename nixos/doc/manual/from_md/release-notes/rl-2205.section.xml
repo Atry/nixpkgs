@@ -2166,13 +2166,32 @@
       </listitem>
       <listitem>
         <para>
+          The <literal>libdwarf_20210528</literal> package has been
+          added:
+        </para>
+        <itemizedlist spacing="compact">
+          <listitem>
+            <para>
+              Including both the library <literal>libdwarf</literal> and
+              executable <literal>dwarfdump</literal>
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              Supporting all unix platforms
+            </para>
+          </listitem>
+        </itemizedlist>
+      </listitem>
+      <listitem>
+        <para>
           The <literal>libdwarf_0_4</literal> package has been added:
         </para>
         <itemizedlist spacing="compact">
           <listitem>
             <para>
-              Including <literal>libdwarf</literal> and
-              <literal>dwarfdump</literal> 0.4.0
+              Including both the library <literal>libdwarf</literal> and
+              executable <literal>dwarfdump</literal>
             </para>
           </listitem>
           <listitem>

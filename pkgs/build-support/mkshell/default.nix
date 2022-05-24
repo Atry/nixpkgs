@@ -1,4 +1,4 @@
-{ lib, stdenv, buildEnv }:
+{ lib, stdenv }:
 
 # A special kind of derivation that is only meant to be consumed by the
 # nix-shell.

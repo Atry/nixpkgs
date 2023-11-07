@@ -164,6 +164,7 @@ py.pkgs.toPythonApplication (py.pkgs.buildAzureCliPackage {
     scp
     semver
     six
+    ssh
     sshtunnel
     tabulate
     urllib3

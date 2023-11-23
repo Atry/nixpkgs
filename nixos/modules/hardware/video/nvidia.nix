@@ -259,30 +259,15 @@ in {
             message = "You cannot configure both X11 and Data Center drivers at the same time.";
           }
         ];
-        boot = {
-          blacklistedKernelModules = ["nouveau" "nvidiafb"];
-
-          # Don't add `nvidia-uvm` to `kernelModules`, because we want
-          # `nvidia-uvm` be loaded only after `udev` rules for `nvidia` kernel
-          # module are applied.
-          #
-          # Instead, we use `softdep` to lazily load `nvidia-uvm` kernel module
-          # after `nvidia` kernel module is loaded and `udev` rules are applied.
-          extraModprobeConfig = ''
-            softdep nvidia post: nvidia-uvm
-          '';
-        };
+        boot.blacklistedKernelModules = ["nouveau" "nvidiafb"];
         systemd.tmpfiles.rules =
           lib.optional config.virtualisation.docker.enableNvidia
             "L+ /run/nvidia-docker/bin - - - - ${nvidia_x11.bin}/origBin";
         services.udev.extraRules =
         ''
-          # Create /dev/nvidia-uvm when the nvidia-uvm module is loaded.
           KERNEL=="nvidia", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidiactl c 195 255'"
           KERNEL=="nvidia", RUN+="${pkgs.runtimeShell} -c 'for i in $$(cat /proc/driver/nvidia/gpus/*/information | grep Minor | cut -d \  -f 4); do mknod -m 666 /dev/nvidia$${i} c 195 $${i}; done'"
           KERNEL=="nvidia_modeset", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidia-modeset c 195 254'"
-          KERNEL=="nvidia_uvm", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidia-uvm c $$(grep nvidia-uvm /proc/devices | cut -d \  -f 1) 0'"
-          KERNEL=="nvidia_uvm", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidia-uvm-tools c $$(grep nvidia-uvm /proc/devices | cut -d \  -f 1) 1'"
         '';
         hardware.opengl = {
           extraPackages = [
@@ -551,33 +536,50 @@ in {
             ++ lib.optional cfg.open "nvidia.NVreg_OpenRmEnableUnsupportedGpus=1"
             ++ lib.optional (config.boot.kernelPackages.kernel.kernelAtLeast "6.2" && !ibtSupport) "ibt=off";
 
-          # enable finegrained power management
-          extraModprobeConfig = lib.optionalString cfg.powerManagement.finegrained ''
-            options nvidia "NVreg_DynamicPowerManagement=0x02"
-          '';
+          extraModprobeConfig = lib.mkMerge [
+            # Don't add `nvidia-uvm` to `kernelModules`, because we want
+            # `nvidia-uvm` be loaded only after `udev` rules for `nvidia` kernel
+            # module are applied.
+            #
+            # Instead, we use `softdep` to lazily load `nvidia-uvm` kernel module
+            # after `nvidia` kernel module is loaded and `udev` rules are applied.
+            "softdep nvidia post: nvidia-uvm"
+
+            # enable finegrained power management
+            (lib.optionalString cfg.powerManagement.finegrained ''
+              options nvidia "NVreg_DynamicPowerManagement=0x02"
+            '')
+          ];
         };
-        services.udev.extraRules =
-          lib.optionalString cfg.powerManagement.finegrained (
-          lib.optionalString (lib.versionOlder config.boot.kernelPackages.kernel.version "5.5") ''
-            # Remove NVIDIA USB xHCI Host Controller devices, if present
-            ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{remove}="1"
+        services.udev.extraRules = ''
+          ${
+            lib.optionalString cfg.powerManagement.finegrained (
+              lib.optionalString (lib.versionOlder config.boot.kernelPackages.kernel.version "5.5") ''
+                # Remove NVIDIA USB xHCI Host Controller devices, if present
+                ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c0330", ATTR{remove}="1"
 
-            # Remove NVIDIA USB Type-C UCSI devices, if present
-            ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c8000", ATTR{remove}="1"
+                # Remove NVIDIA USB Type-C UCSI devices, if present
+                ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0c8000", ATTR{remove}="1"
 
-            # Remove NVIDIA Audio devices, if present
-            ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{remove}="1"
-          ''
-          + ''
-            # Enable runtime PM for NVIDIA VGA/3D controller devices on driver bind
-            ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
-            ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
+                # Remove NVIDIA Audio devices, if present
+                ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x040300", ATTR{remove}="1"
+              ''
+              + ''
+                # Enable runtime PM for NVIDIA VGA/3D controller devices on driver bind
+                ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
+                ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
 
-            # Disable runtime PM for NVIDIA VGA/3D controller devices on driver unbind
-            ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
-            ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
-          ''
-        );
+                # Disable runtime PM for NVIDIA VGA/3D controller devices on driver unbind
+                ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
+                ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
+              ''
+            )
+          }
+
+          # Create /dev/nvidia-uvm when the nvidia-uvm module is loaded.
+          KERNEL=="nvidia_uvm", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidia-uvm c $$(grep nvidia-uvm /proc/devices | cut -d \  -f 1) 0'"
+          KERNEL=="nvidia_uvm", RUN+="${pkgs.runtimeShell} -c 'mknod -m 666 /dev/nvidia-uvm-tools c $$(grep nvidia-uvm /proc/devices | cut -d \  -f 1) 1'"
+        '';
       })
       # Data Center
       (lib.mkIf (cfg.datacenter.enable) {

@@ -16,6 +16,7 @@
   glib-networking,
   gnused,
   gnutls,
+  hostname,
   iproute2,
   json-glib,
   krb5,
@@ -185,6 +186,7 @@ stdenv.mkDerivation (finalAttrs: {
         lib.makeBinPath [
           iproute2
           gnused
+          hostname
         ]
       }
 

@@ -155,9 +155,7 @@ new user (e.g. via `useradd`) will fail right away.
 
 ## Restrict usage time {#sec-restrict-usage-time}
 
-[Timekpr-nExT](https://mjasnik.gitlab.io/timekpr-next/) is a screen
-time managing application that helps optimizing time spent at computer for your
-subordinates, children or even for yourself.
+[Timekpr-nExT](https://mjasnik.gitlab.io/timekpr-next/) is a screen time managing application that helps optimizing time spent at computer for your subordinates, children or even for yourself.
 
 You can enable it via:
 

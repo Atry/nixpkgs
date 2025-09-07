@@ -19,6 +19,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    users.groups.timekpr = {
+      gid = 2000;
+    };
+
     environment.systemPackages = [
       # Add timekpr to system packages so that polkit can find it
       cfg.package

@@ -44,4 +44,6 @@ in
       "d ${targetBaseDir}/work 0755 ${timekprUser} ${timekprGroup} -"
     ];
   };
+
+  meta.maintainers = [ lib.maintainers.atry ];
 }

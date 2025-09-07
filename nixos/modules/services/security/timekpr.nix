@@ -15,12 +15,24 @@ in
     services.timekpr = {
       package = lib.mkPackageOption pkgs "timekpr" { };
       enable = lib.mkEnableOption "Timekpr-nExT, a screen time managing application that helps optimizing time spent at computer for your subordinates, children or even for yourself";
+      adminUsers = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        example = [
+          "alice"
+          "bob"
+        ];
+        description = ''
+          All listed users will become part of the `timekpr` group so they can manage timekpr settings without requiring sudo.
+        '';
+      };
     };
   };
 
   config = lib.mkIf cfg.enable {
     users.groups.timekpr = {
       gid = 2000;
+      members = cfg.adminUsers;
     };
 
     environment.systemPackages = [

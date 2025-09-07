@@ -160,7 +160,7 @@ new user (e.g. via `useradd`) will fail right away.
 You can enable it via:
 
 ```nix
-services.timekpr.enable = true;
+{ services.timekpr.enable = true; }
 ```
 
 This will install the `timekpr` package and start the `timekpr` service.

@@ -7,8 +7,8 @@
 let
   cfg = config.services.timekpr;
   targetBaseDir = "/var/lib/timekpr";
-  timekprUser = "root";
-  timekprGroup = "root";
+  daemonUser = "root";
+  daemonGroup = "root";
 in
 {
   options = {
@@ -55,9 +55,9 @@ in
     };
     security.polkit.enable = true;
     systemd.tmpfiles.rules = [
-      "d ${targetBaseDir} 0755 ${timekprUser} ${timekprGroup} -"
-      "d ${targetBaseDir}/config 0755 ${timekprUser} ${timekprGroup} -"
-      "d ${targetBaseDir}/work 0755 ${timekprUser} ${timekprGroup} -"
+      "d ${targetBaseDir} 0755 ${daemonUser} ${daemonGroup} -"
+      "d ${targetBaseDir}/config 0755 ${daemonUser} ${daemonGroup} -"
+      "d ${targetBaseDir}/work 0755 ${daemonUser} ${daemonGroup} -"
     ];
   };
 
